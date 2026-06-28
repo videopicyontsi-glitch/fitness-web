@@ -11,7 +11,6 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       background: #0f0f1a;
@@ -21,21 +20,14 @@
       display: flex;
       flex-direction: column;
     }
+    #map { flex: 1; width: 100%; z-index: 1; }
 
-    #map {
-      flex: 1;
-      width: 100%;
-      z-index: 1;
-    }
-
-    /* Top stats bar */
+    /* Top bar */
     #stats-bar {
       position: absolute;
-      top: 12px;
-      left: 12px;
-      right: 12px;
+      top: 12px; left: 12px; right: 12px;
       z-index: 1000;
-      background: rgba(15,15,26,0.85);
+      background: rgba(15,15,26,0.88);
       backdrop-filter: blur(12px);
       border-radius: 16px;
       border: 1px solid rgba(255,255,255,0.1);
@@ -43,54 +35,42 @@
       display: none;
       grid-template-columns: repeat(4, 1fr);
     }
-
     #stats-bar.visible { display: grid; }
-
-    .stat {
-      text-align: center;
-      padding: 0 8px;
-      border-left: 1px solid rgba(255,255,255,0.1);
-    }
+    .stat { text-align: center; padding: 0 8px; border-left: 1px solid rgba(255,255,255,0.1); }
     .stat:last-child { border-left: none; }
+    .stat-value { font-size: 16px; font-weight: 700; }
+    .stat-label { font-size: 10px; color: rgba(255,255,255,0.5); margin-top: 2px; }
+    .activity-badge { display: flex; align-items: center; justify-content: center; gap: 4px; font-size: 13px; font-weight: 600; }
+    .activity-badge .dot { width: 8px; height: 8px; border-radius: 50%; }
 
-    .stat-value {
-      font-size: 16px;
-      font-weight: 700;
+    /* History button */
+    #history-btn {
+      position: absolute;
+      top: 12px; left: 12px;
+      z-index: 1000;
+      background: rgba(15,15,26,0.88);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
       color: #fff;
+      font-size: 22px;
+      width: 44px; height: 44px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
     }
-    .stat-label {
-      font-size: 10px;
-      color: rgba(255,255,255,0.5);
-      margin-top: 2px;
-    }
-
-    .activity-badge {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-      font-size: 13px;
-      font-weight: 600;
-    }
-    .activity-badge .dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-    }
+    #history-btn.hidden { display: none; }
 
     /* Legend */
     #legend {
       position: absolute;
-      bottom: 200px;
-      right: 16px;
+      bottom: 200px; right: 16px;
       z-index: 1000;
-      background: rgba(15,15,26,0.85);
+      background: rgba(15,15,26,0.88);
       backdrop-filter: blur(12px);
       border-radius: 12px;
       border: 1px solid rgba(255,255,255,0.1);
       padding: 10px 14px;
-      display: none;
-      gap: 8px;
-      flex-direction: column;
+      display: none; flex-direction: column; gap: 8px;
     }
     #legend.visible { display: flex; }
     .legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; }
@@ -99,9 +79,7 @@
     /* Bottom panel */
     #bottom-panel {
       position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
+      bottom: 0; left: 0; right: 0;
       z-index: 1000;
       background: rgba(15,15,26,0.92);
       backdrop-filter: blur(20px);
@@ -110,135 +88,98 @@
       padding: 20px 20px 36px;
     }
 
-    #activity-selector {
+    /* Name input */
+    #name-row {
       display: flex;
+      align-items: center;
       gap: 8px;
-      margin-bottom: 14px;
+      margin-bottom: 12px;
     }
-
-    .activity-btn {
+    #activity-name {
       flex: 1;
-      padding: 10px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 12px;
+      color: #fff;
+      font-size: 15px;
+      font-family: inherit;
+      padding: 10px 14px;
+      outline: none;
+      direction: rtl;
+    }
+    #activity-name::placeholder { color: rgba(255,255,255,0.3); }
+    #activity-name:focus { border-color: #6366f1; }
+
+    #activity-selector {
+      display: flex; gap: 8px; margin-bottom: 14px;
+    }
+    .activity-btn {
+      flex: 1; padding: 10px;
       border: 1px solid rgba(255,255,255,0.2);
       border-radius: 12px;
       background: transparent;
       color: rgba(255,255,255,0.6);
-      font-size: 13px;
-      font-family: inherit;
-      cursor: pointer;
-      transition: all 0.2s;
+      font-size: 13px; font-family: inherit;
+      cursor: pointer; transition: all 0.2s;
     }
     .activity-btn.active {
       background: rgba(99,102,241,0.3);
-      border-color: #6366f1;
-      color: #fff;
+      border-color: #6366f1; color: #fff;
     }
 
     #main-btn {
-      width: 100%;
-      padding: 16px;
-      border: none;
-      border-radius: 16px;
-      font-size: 17px;
-      font-weight: 700;
-      font-family: inherit;
-      cursor: pointer;
-      transition: all 0.2s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
+      width: 100%; padding: 16px; border: none;
+      border-radius: 16px; font-size: 17px; font-weight: 700;
+      font-family: inherit; cursor: pointer; transition: all 0.2s;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
     }
-
-    #main-btn.start {
-      background: linear-gradient(135deg, #22c55e, #16a34a);
-      color: #fff;
-    }
-    #main-btn.stop {
-      background: linear-gradient(135deg, #ef4444, #dc2626);
-      color: #fff;
-    }
+    #main-btn.start { background: linear-gradient(135deg, #22c55e, #16a34a); color: #fff; }
+    #main-btn.stop  { background: linear-gradient(135deg, #ef4444, #dc2626); color: #fff; }
     #main-btn:active { transform: scale(0.97); }
 
-    /* Permission screen */
+    /* Permission */
     #permission-screen {
-      position: absolute;
-      inset: 0;
-      z-index: 2000;
+      position: absolute; inset: 0; z-index: 2000;
       background: #0f0f1a;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 40px;
-      text-align: center;
-      gap: 20px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 40px; text-align: center; gap: 20px;
     }
-
     #permission-screen .icon { font-size: 80px; }
     #permission-screen h1 { font-size: 26px; }
     #permission-screen p { color: rgba(255,255,255,0.6); line-height: 1.6; }
-
     #permission-btn {
       background: linear-gradient(135deg, #6366f1, #4f46e5);
-      color: #fff;
-      border: none;
-      border-radius: 16px;
-      padding: 16px 32px;
-      font-size: 17px;
-      font-weight: 700;
-      font-family: inherit;
-      cursor: pointer;
-      width: 100%;
-      max-width: 300px;
+      color: #fff; border: none; border-radius: 16px;
+      padding: 16px 32px; font-size: 17px; font-weight: 700;
+      font-family: inherit; cursor: pointer; width: 100%; max-width: 300px;
     }
 
     /* Summary modal */
     #summary-modal {
-      position: absolute;
-      inset: 0;
-      z-index: 3000;
+      position: absolute; inset: 0; z-index: 3000;
       background: rgba(0,0,0,0.7);
-      display: none;
-      align-items: flex-end;
-      justify-content: center;
+      display: none; align-items: flex-end; justify-content: center;
     }
     #summary-modal.visible { display: flex; }
-
     #summary-card {
       background: #1a1a2e;
       border-radius: 28px 28px 0 0;
       padding: 28px 24px 48px;
-      width: 100%;
-      max-height: 85dvh;
-      overflow-y: auto;
+      width: 100%; max-height: 85dvh; overflow-y: auto;
       border-top: 1px solid rgba(255,255,255,0.1);
     }
-
-    #summary-card h2 {
-      text-align: center;
-      font-size: 22px;
-      margin-bottom: 6px;
-    }
-    #summary-card .date {
-      text-align: center;
-      color: rgba(255,255,255,0.4);
-      font-size: 13px;
-      margin-bottom: 24px;
-    }
+    #summary-card h2 { text-align: center; font-size: 22px; margin-bottom: 4px; }
+    #summary-card .activity-title { text-align: center; font-size: 16px; color: #a5b4fc; font-weight: 600; margin-bottom: 4px; }
+    #summary-card .date { text-align: center; color: rgba(255,255,255,0.4); font-size: 13px; margin-bottom: 24px; }
 
     .summary-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 12px;
-      margin-bottom: 24px;
+      display: grid; grid-template-columns: repeat(2, 1fr);
+      gap: 12px; margin-bottom: 24px;
     }
-
     .summary-card {
       background: rgba(255,255,255,0.05);
-      border-radius: 16px;
-      padding: 16px;
-      text-align: center;
+      border-radius: 16px; padding: 16px; text-align: center;
       border: 1px solid rgba(255,255,255,0.08);
     }
     .summary-card .icon { font-size: 28px; margin-bottom: 8px; }
@@ -247,19 +188,11 @@
 
     .breakdown-section {
       background: rgba(255,255,255,0.05);
-      border-radius: 16px;
-      padding: 16px;
-      margin-bottom: 16px;
+      border-radius: 16px; padding: 16px; margin-bottom: 16px;
     }
     .breakdown-section h3 { font-size: 15px; margin-bottom: 14px; color: rgba(255,255,255,0.7); }
-
-    .breakdown-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 10px;
-    }
-    .breakdown-row .icon { font-size: 20px; width: 24px; }
+    .breakdown-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .breakdown-row .bicon { font-size: 20px; width: 24px; }
     .breakdown-row .info { flex: 1; }
     .breakdown-row .info .name { font-size: 14px; font-weight: 600; }
     .breakdown-row .info .sub { font-size: 12px; color: rgba(255,255,255,0.5); }
@@ -267,41 +200,97 @@
 
     .pace-bar-wrap { margin-top: 12px; }
     .pace-bar-wrap .label-row {
-      display: flex;
-      justify-content: space-between;
-      font-size: 11px;
-      color: rgba(255,255,255,0.5);
-      margin-bottom: 6px;
+      display: flex; justify-content: space-between;
+      font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 6px;
     }
-    .pace-bar {
-      height: 10px;
-      border-radius: 5px;
-      display: flex;
-      overflow: hidden;
-      gap: 2px;
-    }
-    .pace-bar .run-seg { background: #f97316; border-radius: 5px; }
+    .pace-bar { height: 10px; border-radius: 5px; display: flex; overflow: hidden; gap: 2px; }
+    .pace-bar .run-seg  { background: #f97316; border-radius: 5px; }
     .pace-bar .walk-seg { background: #3b82f6; border-radius: 5px; }
     .pace-bar .idle-seg { background: rgba(255,255,255,0.15); border-radius: 5px; flex: 1; }
 
+    .summary-btns { display: flex; gap: 10px; margin-top: 8px; }
+    #save-btn {
+      flex: 1; padding: 16px;
+      background: linear-gradient(135deg, #6366f1, #4f46e5);
+      color: #fff; border: none; border-radius: 16px;
+      font-size: 17px; font-weight: 700; font-family: inherit; cursor: pointer;
+    }
     #dismiss-btn {
-      width: 100%;
+      flex: 1; padding: 16px;
+      background: rgba(255,255,255,0.08);
+      color: #fff; border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 16px; font-size: 17px; font-weight: 700;
+      font-family: inherit; cursor: pointer;
+    }
+
+    /* History modal */
+    #history-modal {
+      position: absolute; inset: 0; z-index: 3000;
+      background: #0f0f1a;
+      display: none; flex-direction: column;
+    }
+    #history-modal.visible { display: flex; }
+    #history-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 20px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    #history-header h2 { font-size: 20px; }
+    #close-history {
+      background: rgba(255,255,255,0.08);
+      border: none; color: #fff;
+      width: 36px; height: 36px; border-radius: 50%;
+      font-size: 18px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    #history-list {
+      flex: 1; overflow-y: auto;
       padding: 16px;
-      background: #6366f1;
-      color: #fff;
-      border: none;
-      border-radius: 16px;
-      font-size: 17px;
-      font-weight: 700;
-      font-family: inherit;
-      cursor: pointer;
-      margin-top: 8px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .history-item {
+      background: rgba(255,255,255,0.05);
+      border-radius: 16px; padding: 16px;
+      border: 1px solid rgba(255,255,255,0.08);
+      position: relative;
+    }
+    .history-item .h-name {
+      font-size: 16px; font-weight: 700; margin-bottom: 4px;
+    }
+    .history-item .h-date {
+      font-size: 12px; color: rgba(255,255,255,0.4); margin-bottom: 12px;
+    }
+    .history-item .h-stats {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+    }
+    .h-stat { text-align: center; }
+    .h-stat .hv { font-size: 15px; font-weight: 700; }
+    .h-stat .hl { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 2px; }
+    .h-type {
+      display: inline-block;
+      background: rgba(99,102,241,0.2);
+      color: #a5b4fc;
+      border-radius: 8px;
+      padding: 2px 8px;
+      font-size: 12px;
+      margin-bottom: 10px;
+    }
+    .h-delete {
+      position: absolute; top: 12px; left: 12px;
+      background: transparent; border: none;
+      color: rgba(255,255,255,0.3); font-size: 18px;
+      cursor: pointer; padding: 4px;
+    }
+    .h-delete:active { color: #ef4444; }
+    #history-empty {
+      text-align: center; color: rgba(255,255,255,0.3);
+      margin-top: 60px; font-size: 15px; line-height: 2;
     }
   </style>
 </head>
 <body>
 
-<!-- Permission screen -->
+<!-- Permission -->
 <div id="permission-screen">
   <div class="icon">📍</div>
   <h1>מעקב כושר</h1>
@@ -309,7 +298,6 @@
   <button id="permission-btn" onclick="requestLocation()">אפשר גישה למיקום</button>
 </div>
 
-<!-- Map -->
 <div id="map"></div>
 
 <!-- Stats bar -->
@@ -328,12 +316,14 @@
   </div>
   <div class="stat">
     <div class="activity-badge" id="stat-activity">
-      <span class="dot" style="background:#6b7280"></span>
-      <span>עצירה</span>
+      <span class="dot" style="background:#6b7280"></span><span>עצירה</span>
     </div>
     <div class="stat-label">פעילות</div>
   </div>
 </div>
+
+<!-- History button -->
+<button id="history-btn" onclick="openHistory()">📋</button>
 
 <!-- Legend -->
 <div id="legend">
@@ -344,10 +334,13 @@
 
 <!-- Bottom panel -->
 <div id="bottom-panel">
+  <div id="name-row">
+    <input id="activity-name" type="text" placeholder="שם הפעילות (אופציונלי)" maxlength="40">
+  </div>
   <div id="activity-selector">
-    <button class="activity-btn active" onclick="selectActivity(this, 'חופשי')">🏃 חופשי</button>
-    <button class="activity-btn" onclick="selectActivity(this, 'הליכה')">🚶 הליכה</button>
-    <button class="activity-btn" onclick="selectActivity(this, 'מרווחים')">⚡ מרווחים</button>
+    <button class="activity-btn active" onclick="selectActivity(this)">🏃 חופשי</button>
+    <button class="activity-btn" onclick="selectActivity(this)">🚶 הליכה</button>
+    <button class="activity-btn" onclick="selectActivity(this)">⚡ מרווחים</button>
   </div>
   <button id="main-btn" class="start" onclick="toggleTracking()">
     <span>▶</span> התחל פעילות
@@ -358,6 +351,7 @@
 <div id="summary-modal">
   <div id="summary-card">
     <h2>כל הכבוד! 🎉</h2>
+    <div class="activity-title" id="summary-activity-name"></div>
     <div class="date" id="summary-date"></div>
     <div class="summary-grid">
       <div class="summary-card">
@@ -381,23 +375,16 @@
         <div class="label">קצב ממוצע</div>
       </div>
     </div>
-
     <div class="breakdown-section">
       <h3>פירוט פעילות</h3>
       <div class="breakdown-row" id="run-row" style="display:none">
-        <div class="icon">🏃</div>
-        <div class="info">
-          <div class="name">ריצה</div>
-          <div class="sub" id="run-sub"></div>
-        </div>
+        <div class="bicon">🏃</div>
+        <div class="info"><div class="name">ריצה</div><div class="sub" id="run-sub"></div></div>
         <div class="vals" id="run-vals"></div>
       </div>
       <div class="breakdown-row" id="walk-row" style="display:none">
-        <div class="icon">🚶</div>
-        <div class="info">
-          <div class="name">הליכה</div>
-          <div class="sub" id="walk-sub"></div>
-        </div>
+        <div class="bicon">🚶</div>
+        <div class="info"><div class="name">הליכה</div><div class="sub" id="walk-sub"></div></div>
         <div class="vals" id="walk-vals"></div>
       </div>
       <div class="pace-bar-wrap">
@@ -406,15 +393,26 @@
           <span id="walk-pct">הליכה 0%</span>
         </div>
         <div class="pace-bar">
-          <div class="run-seg" id="run-bar"></div>
+          <div class="run-seg"  id="run-bar"></div>
           <div class="walk-seg" id="walk-bar"></div>
-          <div class="idle-seg" id="idle-bar"></div>
+          <div class="idle-seg"></div>
         </div>
       </div>
     </div>
-
-    <button id="dismiss-btn" onclick="dismissSummary()">סיום</button>
+    <div class="summary-btns">
+      <button id="save-btn" onclick="saveActivity()">💾 שמור</button>
+      <button id="dismiss-btn" onclick="dismissSummary()">סיום</button>
+    </div>
   </div>
+</div>
+
+<!-- History modal -->
+<div id="history-modal">
+  <div id="history-header">
+    <h2>📋 היסטוריה</h2>
+    <button id="close-history" onclick="closeHistory()">✕</button>
+  </div>
+  <div id="history-list"></div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -422,88 +420,63 @@
 // ─── State ───────────────────────────────────────────────
 let map, watchId;
 let isTracking = false;
-let routePoints = [];
-let polylines = [];
-let startTime = null;
-let timerInterval = null;
-
-let totalDistance = 0;
-let walkingDistance = 0, runningDistance = 0;
+let startTime = null, timerInterval = null;
+let totalDistance = 0, walkingDistance = 0, runningDistance = 0;
 let walkingTime = 0, runningTime = 0;
 let currentActivity = 'idle';
-let lastPos = null;
-let segmentStart = null;
-let currentPolyline = null;
-let currentCoords = [];
+let lastPos = null, segmentStart = null;
+let currentPolyline = null, currentCoords = [], polylines = [];
+let lastSummaryData = null;
 
-const WALK_MIN = 0.5;  // m/s
-const RUN_MIN  = 2.2;  // m/s
+const WALK_MIN = 0.5, RUN_MIN = 2.2;
+const COLORS = { idle: '#6b7280', walking: '#3b82f6', running: '#f97316' };
+const LABELS = { idle: 'עצירה', walking: 'הליכה', running: 'ריצה' };
 
-const ACTIVITY_COLORS = { idle: '#6b7280', walking: '#3b82f6', running: '#f97316' };
-const ACTIVITY_LABELS = { idle: 'עצירה', walking: 'הליכה', running: 'ריצה' };
-
-// ─── Map init ─────────────────────────────────────────────
+// ─── Map ─────────────────────────────────────────────────
 function initMap(lat, lng) {
   map = L.map('map', { zoomControl: false, attributionControl: false }).setView([lat, lng], 17);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    maxZoom: 19
-  }).addTo(map);
-
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
   L.control.zoom({ position: 'bottomleft' }).addTo(map);
-
-  // User dot
   window.userMarker = L.circleMarker([lat, lng], {
-    radius: 10, color: '#fff', weight: 2,
-    fillColor: '#6366f1', fillOpacity: 1
+    radius: 10, color: '#fff', weight: 2, fillColor: '#6366f1', fillOpacity: 1
   }).addTo(map);
 }
 
-// ─── Permission ───────────────────────────────────────────
 function requestLocation() {
   navigator.geolocation.getCurrentPosition(pos => {
     document.getElementById('permission-screen').style.display = 'none';
     initMap(pos.coords.latitude, pos.coords.longitude);
-  }, err => {
-    alert('לא ניתן לקבל מיקום. אנא אפשר גישה בהגדרות הדפדפן.');
-  }, { enableHighAccuracy: true });
+  }, () => alert('לא ניתן לקבל מיקום. אנא אפשר גישה בהגדרות הדפדפן.'), { enableHighAccuracy: true });
 }
 
 // ─── Activity selector ────────────────────────────────────
-function selectActivity(btn, name) {
+function selectActivity(btn) {
   document.querySelectorAll('.activity-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
 }
 
 // ─── Tracking ─────────────────────────────────────────────
 function toggleTracking() {
-  if (isTracking) stopTracking();
-  else startTracking();
+  isTracking ? stopTracking() : startTracking();
 }
 
 function startTracking() {
   isTracking = true;
-  routePoints = [];
-  totalDistance = 0;
-  walkingDistance = runningDistance = walkingTime = runningTime = 0;
-  lastPos = null;
-  segmentStart = Date.now();
-  currentActivity = 'idle';
+  totalDistance = walkingDistance = runningDistance = walkingTime = runningTime = 0;
+  lastPos = null; segmentStart = Date.now(); currentActivity = 'idle';
   startTime = Date.now();
-
-  // Clear old polylines
   polylines.forEach(p => map.removeLayer(p));
-  polylines = [];
-  currentPolyline = null;
-  currentCoords = [];
+  polylines = []; currentPolyline = null; currentCoords = [];
 
   document.getElementById('stats-bar').classList.add('visible');
   document.getElementById('legend').classList.add('visible');
+  document.getElementById('history-btn').classList.add('hidden');
+  document.getElementById('name-row').style.display = 'none';
   document.getElementById('activity-selector').style.display = 'none';
   document.getElementById('main-btn').className = 'stop';
   document.getElementById('main-btn').innerHTML = '<span>⏹</span> עצור פעילות';
 
   timerInterval = setInterval(updateTimer, 1000);
-
   watchId = navigator.geolocation.watchPosition(onPosition, null, {
     enableHighAccuracy: true, maximumAge: 0, timeout: 10000
   });
@@ -513,16 +486,17 @@ function stopTracking() {
   isTracking = false;
   navigator.geolocation.clearWatch(watchId);
   clearInterval(timerInterval);
-
-  // Finalize last segment
-  const now = Date.now();
-  const dur = (now - segmentStart) / 1000;
+  const dur = (Date.now() - segmentStart) / 1000;
   if (currentActivity === 'walking') walkingTime += dur;
   else if (currentActivity === 'running') runningTime += dur;
 
+  document.getElementById('history-btn').classList.remove('hidden');
+  document.getElementById('name-row').style.display = 'flex';
   document.getElementById('activity-selector').style.display = 'flex';
   document.getElementById('main-btn').className = 'start';
   document.getElementById('main-btn').innerHTML = '<span>▶</span> התחל פעילות';
+  document.getElementById('stats-bar').classList.remove('visible');
+  document.getElementById('legend').classList.remove('visible');
 
   showSummary();
 }
@@ -530,23 +504,16 @@ function stopTracking() {
 function onPosition(pos) {
   const { latitude: lat, longitude: lng, speed } = pos.coords;
   const spd = Math.max(speed || 0, 0);
-
-  // Update marker
   window.userMarker.setLatLng([lat, lng]);
   map.panTo([lat, lng]);
 
-  // Classify
-  const newActivity = spd < WALK_MIN ? 'idle' : spd < RUN_MIN ? 'walking' : 'running';
-
-  // Activity changed — finalize old segment
-  if (newActivity !== currentActivity) {
+  const newAct = spd < WALK_MIN ? 'idle' : spd < RUN_MIN ? 'walking' : 'running';
+  if (newAct !== currentActivity) {
     finalizeSegment();
-    currentActivity = newActivity;
+    currentActivity = newAct;
     segmentStart = Date.now();
     startNewPolyline(lat, lng);
   }
-
-  // Distance
   if (lastPos) {
     const d = haversine(lastPos[0], lastPos[1], lat, lng);
     if (d > 2) {
@@ -555,25 +522,19 @@ function onPosition(pos) {
       else if (currentActivity === 'running') runningDistance += d;
     }
   }
-
-  // Extend current polyline
-  if (currentPolyline) {
-    currentCoords.push([lat, lng]);
-    currentPolyline.setLatLngs(currentCoords);
-  } else {
-    startNewPolyline(lat, lng);
-  }
-
+  if (currentPolyline) { currentCoords.push([lat, lng]); currentPolyline.setLatLngs(currentCoords); }
+  else startNewPolyline(lat, lng);
   lastPos = [lat, lng];
-  updateStatsBar(spd, newActivity);
+
+  document.getElementById('stat-distance').textContent = (totalDistance/1000).toFixed(2);
+  document.getElementById('stat-speed').textContent = (spd*3.6).toFixed(1);
+  document.getElementById('stat-activity').innerHTML =
+    `<span class="dot" style="background:${COLORS[newAct]}"></span><span>${LABELS[newAct]}</span>`;
 }
 
 function startNewPolyline(lat, lng) {
   currentCoords = lastPos ? [lastPos, [lat, lng]] : [[lat, lng]];
-  currentPolyline = L.polyline(currentCoords, {
-    color: ACTIVITY_COLORS[currentActivity],
-    weight: 5, opacity: 0.9
-  }).addTo(map);
+  currentPolyline = L.polyline(currentCoords, { color: COLORS[currentActivity], weight: 5, opacity: 0.9 }).addTo(map);
   polylines.push(currentPolyline);
 }
 
@@ -583,94 +544,151 @@ function finalizeSegment() {
   else if (currentActivity === 'running') runningTime += dur;
 }
 
-// ─── UI updates ───────────────────────────────────────────
 function updateTimer() {
-  const elapsed = Math.floor((Date.now() - startTime) / 1000);
-  document.getElementById('stat-time').textContent = formatTime(elapsed);
-}
-
-function updateStatsBar(spd, activity) {
-  document.getElementById('stat-distance').textContent = (totalDistance / 1000).toFixed(2);
-  document.getElementById('stat-speed').textContent = (spd * 3.6).toFixed(1);
-  const actEl = document.getElementById('stat-activity');
-  actEl.innerHTML = `<span class="dot" style="background:${ACTIVITY_COLORS[activity]}"></span><span>${ACTIVITY_LABELS[activity]}</span>`;
+  const s = Math.floor((Date.now() - startTime) / 1000);
+  document.getElementById('stat-time').textContent = formatTime(s);
 }
 
 // ─── Summary ──────────────────────────────────────────────
 function showSummary() {
   const elapsed = Math.floor((Date.now() - startTime) / 1000);
-  const calories = calcCalories();
+  const calories = (3.5 * 70 * walkingTime / 3600) + (9.0 * 70 * runningTime / 3600);
   const pace = totalDistance > 0 ? elapsed / (totalDistance / 1000) : 0;
-
-  document.getElementById('summary-date').textContent = new Date().toLocaleDateString('he-IL', {
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
-    hour: '2-digit', minute: '2-digit'
+  const actName = document.getElementById('activity-name').value.trim();
+  const actType = document.querySelector('.activity-btn.active').textContent.trim();
+  const dateStr = new Date().toLocaleDateString('he-IL', {
+    weekday:'long', year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit'
   });
 
+  lastSummaryData = {
+    name: actName || actType,
+    type: actType,
+    date: dateStr,
+    timestamp: Date.now(),
+    distance: totalDistance,
+    elapsed,
+    calories: Math.round(calories),
+    pace,
+    walkingDistance, runningDistance, walkingTime, runningTime
+  };
+
+  document.getElementById('summary-activity-name').textContent = actName || actType;
+  document.getElementById('summary-date').textContent = dateStr;
   document.getElementById('sum-distance').textContent =
-    totalDistance >= 1000 ? (totalDistance/1000).toFixed(2) + ' ק"מ' : Math.round(totalDistance) + ' מ\'';
+    totalDistance >= 1000 ? (totalDistance/1000).toFixed(2)+' ק"מ' : Math.round(totalDistance)+' מ\'';
   document.getElementById('sum-time').textContent = formatTime(elapsed);
-  document.getElementById('sum-calories').textContent = Math.round(calories) + ' קק"ל';
+  document.getElementById('sum-calories').textContent = Math.round(calories)+' קק"ל';
   document.getElementById('sum-pace').textContent = pace > 0 ? formatPace(pace) : '--';
 
-  // Breakdown
   if (runningDistance > 0) {
     document.getElementById('run-row').style.display = 'flex';
     document.getElementById('run-sub').textContent = formatTime(Math.round(runningTime));
-    document.getElementById('run-vals').textContent = (runningDistance/1000).toFixed(2) + ' ק"מ';
+    document.getElementById('run-vals').textContent = (runningDistance/1000).toFixed(2)+' ק"מ';
   }
   if (walkingDistance > 0) {
     document.getElementById('walk-row').style.display = 'flex';
     document.getElementById('walk-sub').textContent = formatTime(Math.round(walkingTime));
-    document.getElementById('walk-vals').textContent = (walkingDistance/1000).toFixed(2) + ' ק"מ';
+    document.getElementById('walk-vals').textContent = (walkingDistance/1000).toFixed(2)+' ק"מ';
   }
-
-  const total = totalDistance || 1;
-  const rPct = runningDistance / total;
-  const wPct = walkingDistance / total;
-  document.getElementById('run-bar').style.width = (rPct * 100) + '%';
-  document.getElementById('walk-bar').style.width = (wPct * 100) + '%';
-  document.getElementById('run-pct').textContent = `ריצה ${Math.round(rPct*100)}%`;
-  document.getElementById('walk-pct').textContent = `הליכה ${Math.round(wPct*100)}%`;
+  const tot = totalDistance || 1;
+  const rp = runningDistance/tot, wp = walkingDistance/tot;
+  document.getElementById('run-bar').style.width = (rp*100)+'%';
+  document.getElementById('walk-bar').style.width = (wp*100)+'%';
+  document.getElementById('run-pct').textContent = `ריצה ${Math.round(rp*100)}%`;
+  document.getElementById('walk-pct').textContent = `הליכה ${Math.round(wp*100)}%`;
 
   document.getElementById('summary-modal').classList.add('visible');
-  document.getElementById('stats-bar').classList.remove('visible');
-  document.getElementById('legend').classList.remove('visible');
+}
+
+async function saveActivity() {
+  if (!lastSummaryData) return;
+  try {
+    await fetch('/activities', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(lastSummaryData)
+    });
+    document.getElementById('save-btn').textContent = '✅ נשמר!';
+    document.getElementById('save-btn').disabled = true;
+  } catch { alert('שגיאה בשמירה'); }
 }
 
 function dismissSummary() {
   document.getElementById('summary-modal').classList.remove('visible');
   document.getElementById('run-row').style.display = 'none';
   document.getElementById('walk-row').style.display = 'none';
+  document.getElementById('save-btn').textContent = '💾 שמור';
+  document.getElementById('save-btn').disabled = false;
+  document.getElementById('activity-name').value = '';
 }
 
-// ─── Helpers ──────────────────────────────────────────────
-function calcCalories(weight = 70) {
-  return (3.5 * weight * walkingTime / 3600) + (9.0 * weight * runningTime / 3600);
+// ─── History ──────────────────────────────────────────────
+async function openHistory() {
+  document.getElementById('history-modal').classList.add('visible');
+  const list = document.getElementById('history-list');
+  list.innerHTML = '<div style="text-align:center;padding:40px;color:rgba(255,255,255,0.3)">טוען...</div>';
+  try {
+    const res = await fetch('/activities');
+    const activities = await res.json();
+    renderHistory(activities);
+  } catch { list.innerHTML = '<div style="text-align:center;padding:40px;color:rgba(255,255,255,0.3)">שגיאה בטעינה</div>'; }
 }
 
+function renderHistory(activities) {
+  const list = document.getElementById('history-list');
+  if (!activities.length) {
+    list.innerHTML = '<div id="history-empty">עדיין אין פעילויות שמורות 🏃<br>התחל פעילות ולחץ שמור</div>';
+    return;
+  }
+  list.innerHTML = activities.map(a => `
+    <div class="history-item" id="hi-${a.id}">
+      <button class="h-delete" onclick="deleteActivity(${a.id})">🗑</button>
+      <div class="h-name">${a.name || 'פעילות'}</div>
+      <div class="h-date">${a.date}</div>
+      <span class="h-type">${a.type || ''}</span>
+      <div class="h-stats">
+        <div class="h-stat">
+          <div class="hv">${a.distance >= 1000 ? (a.distance/1000).toFixed(2)+' ק"מ' : Math.round(a.distance)+' מ\''}</div>
+          <div class="hl">מרחק</div>
+        </div>
+        <div class="h-stat">
+          <div class="hv">${formatTime(a.elapsed)}</div>
+          <div class="hl">זמן</div>
+        </div>
+        <div class="h-stat">
+          <div class="hv">${a.calories} קק"ל</div>
+          <div class="hl">קלוריות</div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function deleteActivity(id) {
+  if (!confirm('למחוק פעילות זו?')) return;
+  await fetch(`/activities/${id}`, { method: 'DELETE' });
+  document.getElementById(`hi-${id}`)?.remove();
+  if (!document.querySelector('.history-item')) {
+    document.getElementById('history-list').innerHTML =
+      '<div id="history-empty">עדיין אין פעילויות שמורות 🏃<br>התחל פעילות ולחץ שמור</div>';
+  }
+}
+
+function closeHistory() {
+  document.getElementById('history-modal').classList.remove('visible');
+}
+
+// ─── Utils ────────────────────────────────────────────────
 function formatTime(s) {
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
-  if (h > 0) return `${h}:${pad(m)}:${pad(sec)}`;
-  return `${pad(m)}:${pad(sec)}`;
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
+  return h > 0 ? `${h}:${pad(m)}:${pad(sec)}` : `${pad(m)}:${pad(sec)}`;
 }
-
-function pad(n) { return String(n).padStart(2, '0'); }
-
-function formatPace(secPerKm) {
-  const m = Math.floor(secPerKm / 60);
-  const s = Math.round(secPerKm % 60);
-  return `${m}:${pad(s)} /ק"מ`;
-}
-
-function haversine(lat1, lon1, lat2, lon2) {
-  const R = 6371000;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+function pad(n) { return String(n).padStart(2,'0'); }
+function formatPace(spk) { return `${Math.floor(spk/60)}:${pad(Math.round(spk%60))} /ק"מ`; }
+function haversine(la1,lo1,la2,lo2) {
+  const R=6371000, dL=(la2-la1)*Math.PI/180, dO=(lo2-lo1)*Math.PI/180;
+  const a=Math.sin(dL/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dO/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
 </script>
 </body>
