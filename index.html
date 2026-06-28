@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#1a1a2e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>מעקב כושר</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f0f1a;
+      color: #fff;
+      height: 100dvh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #map {
+      flex: 1;
+      width: 100%;
+      z-index: 1;
+    }
+
+    /* Top stats bar */
+    #stats-bar {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      right: 12px;
+      z-index: 1000;
+      background: rgba(15,15,26,0.85);
+      backdrop-filter: blur(12px);
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.1);
+      padding: 12px 0;
+      display: none;
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    #stats-bar.visible { display: grid; }
+
+    .stat {
+      text-align: center;
+      padding: 0 8px;
+      border-left: 1px solid rgba(255,255,255,0.1);
+    }
+    .stat:last-child { border-left: none; }
+
+    .stat-value {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .stat-label {
+      font-size: 10px;
+      color: rgba(255,255,255,0.5);
+      margin-top: 2px;
+    }
+
+    .activity-badge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .activity-badge .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+    }
+
+    /* Legend */
+    #legend {
+      position: absolute;
+      bottom: 200px;
+      right: 16px;
+      z-index: 1000;
+      background: rgba(15,15,26,0.85);
+      backdrop-filter: blur(12px);
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.1);
+      padding: 10px 14px;
+      display: none;
+      gap: 8px;
+      flex-direction: column;
+    }
+    #legend.visible { display: flex; }
+    .legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+    /* Bottom panel */
+    #bottom-panel {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      background: rgba(15,15,26,0.92);
+      backdrop-filter: blur(20px);
+      border-top: 1px solid rgba(255,255,255,0.1);
+      border-radius: 24px 24px 0 0;
+      padding: 20px 20px 36px;
+    }
+
+    #activity-selector {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .activity-btn {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 12px;
+      background: transparent;
+      color: rgba(255,255,255,0.6);
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .activity-btn.active {
+      background: rgba(99,102,241,0.3);
+      border-color: #6366f1;
+      color: #fff;
+    }
+
+    #main-btn {
+      width: 100%;
+      padding: 16px;
+      border: none;
+      border-radius: 16px;
+      font-size: 17px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    #main-btn.start {
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color: #fff;
+    }
+    #main-btn.stop {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: #fff;
+    }
+    #main-btn:active { transform: scale(0.97); }
+
+    /* Permission screen */
+    #permission-screen {
+      position: absolute;
+      inset: 0;
+      z-index: 2000;
+      background: #0f0f1a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      text-align: center;
+      gap: 20px;
+    }
+
+    #permission-screen .icon { font-size: 80px; }
+    #permission-screen h1 { font-size: 26px; }
+    #permission-screen p { color: rgba(255,255,255,0.6); line-height: 1.6; }
+
+    #permission-btn {
+      background: linear-gradient(135deg, #6366f1, #4f46e5);
+      color: #fff;
+      border: none;
+      border-radius: 16px;
+      padding: 16px 32px;
+      font-size: 17px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      width: 100%;
+      max-width: 300px;
+    }
+
+    /* Summary modal */
+    #summary-modal {
+      position: absolute;
+      inset: 0;
+      z-index: 3000;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    #summary-modal.visible { display: flex; }
+
+    #summary-card {
+      background: #1a1a2e;
+      border-radius: 28px 28px 0 0;
+      padding: 28px 24px 48px;
+      width: 100%;
+      max-height: 85dvh;
+      overflow-y: auto;
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+
+    #summary-card h2 {
+      text-align: center;
+      font-size: 22px;
+      margin-bottom: 6px;
+    }
+    #summary-card .date {
+      text-align: center;
+      color: rgba(255,255,255,0.4);
+      font-size: 13px;
+      margin-bottom: 24px;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .summary-card {
+      background: rgba(255,255,255,0.05);
+      border-radius: 16px;
+      padding: 16px;
+      text-align: center;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .summary-card .icon { font-size: 28px; margin-bottom: 8px; }
+    .summary-card .value { font-size: 20px; font-weight: 700; }
+    .summary-card .label { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 4px; }
+
+    .breakdown-section {
+      background: rgba(255,255,255,0.05);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .breakdown-section h3 { font-size: 15px; margin-bottom: 14px; color: rgba(255,255,255,0.7); }
+
+    .breakdown-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .breakdown-row .icon { font-size: 20px; width: 24px; }
+    .breakdown-row .info { flex: 1; }
+    .breakdown-row .info .name { font-size: 14px; font-weight: 600; }
+    .breakdown-row .info .sub { font-size: 12px; color: rgba(255,255,255,0.5); }
+    .breakdown-row .vals { text-align: left; font-size: 13px; }
+
+    .pace-bar-wrap { margin-top: 12px; }
+    .pace-bar-wrap .label-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: rgba(255,255,255,0.5);
+      margin-bottom: 6px;
+    }
+    .pace-bar {
+      height: 10px;
+      border-radius: 5px;
+      display: flex;
+      overflow: hidden;
+      gap: 2px;
+    }
+    .pace-bar .run-seg { background: #f97316; border-radius: 5px; }
+    .pace-bar .walk-seg { background: #3b82f6; border-radius: 5px; }
+    .pace-bar .idle-seg { background: rgba(255,255,255,0.15); border-radius: 5px; flex: 1; }
+
+    #dismiss-btn {
+      width: 100%;
+      padding: 16px;
+      background: #6366f1;
+      color: #fff;
+      border: none;
+      border-radius: 16px;
+      font-size: 17px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Permission screen -->
+<div id="permission-screen">
+  <div class="icon">📍</div>
+  <h1>מעקב כושר</h1>
+  <p>האפליקציה זקוקה לגישה למיקום כדי לעקוב אחרי הפעילות הגופנית שלך ולהציג את המסלול על המפה.</p>
+  <button id="permission-btn" onclick="requestLocation()">אפשר גישה למיקום</button>
+</div>
+
+<!-- Map -->
+<div id="map"></div>
+
+<!-- Stats bar -->
+<div id="stats-bar">
+  <div class="stat">
+    <div class="stat-value" id="stat-distance">0.00</div>
+    <div class="stat-label">ק"מ</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value" id="stat-time">00:00</div>
+    <div class="stat-label">זמן</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value" id="stat-speed">0.0</div>
+    <div class="stat-label">קמ"ש</div>
+  </div>
+  <div class="stat">
+    <div class="activity-badge" id="stat-activity">
+      <span class="dot" style="background:#6b7280"></span>
+      <span>עצירה</span>
+    </div>
+    <div class="stat-label">פעילות</div>
+  </div>
+</div>
+
+<!-- Legend -->
+<div id="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#f97316"></div> ריצה</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div> הליכה</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#6b7280"></div> עצירה</div>
+</div>
+
+<!-- Bottom panel -->
+<div id="bottom-panel">
+  <div id="activity-selector">
+    <button class="activity-btn active" onclick="selectActivity(this, 'חופשי')">🏃 חופשי</button>
+    <button class="activity-btn" onclick="selectActivity(this, 'הליכה')">🚶 הליכה</button>
+    <button class="activity-btn" onclick="selectActivity(this, 'מרווחים')">⚡ מרווחים</button>
+  </div>
+  <button id="main-btn" class="start" onclick="toggleTracking()">
+    <span>▶</span> התחל פעילות
+  </button>
+</div>
+
+<!-- Summary modal -->
+<div id="summary-modal">
+  <div id="summary-card">
+    <h2>כל הכבוד! 🎉</h2>
+    <div class="date" id="summary-date"></div>
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="icon">📍</div>
+        <div class="value" id="sum-distance">-</div>
+        <div class="label">מרחק</div>
+      </div>
+      <div class="summary-card">
+        <div class="icon">⏱️</div>
+        <div class="value" id="sum-time">-</div>
+        <div class="label">זמן כולל</div>
+      </div>
+      <div class="summary-card">
+        <div class="icon">🔥</div>
+        <div class="value" id="sum-calories">-</div>
+        <div class="label">קלוריות</div>
+      </div>
+      <div class="summary-card">
+        <div class="icon">📈</div>
+        <div class="value" id="sum-pace">-</div>
+        <div class="label">קצב ממוצע</div>
+      </div>
+    </div>
+
+    <div class="breakdown-section">
+      <h3>פירוט פעילות</h3>
+      <div class="breakdown-row" id="run-row" style="display:none">
+        <div class="icon">🏃</div>
+        <div class="info">
+          <div class="name">ריצה</div>
+          <div class="sub" id="run-sub"></div>
+        </div>
+        <div class="vals" id="run-vals"></div>
+      </div>
+      <div class="breakdown-row" id="walk-row" style="display:none">
+        <div class="icon">🚶</div>
+        <div class="info">
+          <div class="name">הליכה</div>
+          <div class="sub" id="walk-sub"></div>
+        </div>
+        <div class="vals" id="walk-vals"></div>
+      </div>
+      <div class="pace-bar-wrap">
+        <div class="label-row">
+          <span id="run-pct">ריצה 0%</span>
+          <span id="walk-pct">הליכה 0%</span>
+        </div>
+        <div class="pace-bar">
+          <div class="run-seg" id="run-bar"></div>
+          <div class="walk-seg" id="walk-bar"></div>
+          <div class="idle-seg" id="idle-bar"></div>
+        </div>
+      </div>
+    </div>
+
+    <button id="dismiss-btn" onclick="dismissSummary()">סיום</button>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ─── State ───────────────────────────────────────────────
+let map, watchId;
+let isTracking = false;
+let routePoints = [];
+let polylines = [];
+let startTime = null;
+let timerInterval = null;
+
+let totalDistance = 0;
+let walkingDistance = 0, runningDistance = 0;
+let walkingTime = 0, runningTime = 0;
+let currentActivity = 'idle';
+let lastPos = null;
+let segmentStart = null;
+let currentPolyline = null;
+let currentCoords = [];
+
+const WALK_MIN = 0.5;  // m/s
+const RUN_MIN  = 2.2;  // m/s
+
+const ACTIVITY_COLORS = { idle: '#6b7280', walking: '#3b82f6', running: '#f97316' };
+const ACTIVITY_LABELS = { idle: 'עצירה', walking: 'הליכה', running: 'ריצה' };
+
+// ─── Map init ─────────────────────────────────────────────
+function initMap(lat, lng) {
+  map = L.map('map', { zoomControl: false, attributionControl: false }).setView([lat, lng], 17);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    maxZoom: 19
+  }).addTo(map);
+
+  L.control.zoom({ position: 'bottomleft' }).addTo(map);
+
+  // User dot
+  window.userMarker = L.circleMarker([lat, lng], {
+    radius: 10, color: '#fff', weight: 2,
+    fillColor: '#6366f1', fillOpacity: 1
+  }).addTo(map);
+}
+
+// ─── Permission ───────────────────────────────────────────
+function requestLocation() {
+  navigator.geolocation.getCurrentPosition(pos => {
+    document.getElementById('permission-screen').style.display = 'none';
+    initMap(pos.coords.latitude, pos.coords.longitude);
+  }, err => {
+    alert('לא ניתן לקבל מיקום. אנא אפשר גישה בהגדרות הדפדפן.');
+  }, { enableHighAccuracy: true });
+}
+
+// ─── Activity selector ────────────────────────────────────
+function selectActivity(btn, name) {
+  document.querySelectorAll('.activity-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ─── Tracking ─────────────────────────────────────────────
+function toggleTracking() {
+  if (isTracking) stopTracking();
+  else startTracking();
+}
+
+function startTracking() {
+  isTracking = true;
+  routePoints = [];
+  totalDistance = 0;
+  walkingDistance = runningDistance = walkingTime = runningTime = 0;
+  lastPos = null;
+  segmentStart = Date.now();
+  currentActivity = 'idle';
+  startTime = Date.now();
+
+  // Clear old polylines
+  polylines.forEach(p => map.removeLayer(p));
+  polylines = [];
+  currentPolyline = null;
+  currentCoords = [];
+
+  document.getElementById('stats-bar').classList.add('visible');
+  document.getElementById('legend').classList.add('visible');
+  document.getElementById('activity-selector').style.display = 'none';
+  document.getElementById('main-btn').className = 'stop';
+  document.getElementById('main-btn').innerHTML = '<span>⏹</span> עצור פעילות';
+
+  timerInterval = setInterval(updateTimer, 1000);
+
+  watchId = navigator.geolocation.watchPosition(onPosition, null, {
+    enableHighAccuracy: true, maximumAge: 0, timeout: 10000
+  });
+}
+
+function stopTracking() {
+  isTracking = false;
+  navigator.geolocation.clearWatch(watchId);
+  clearInterval(timerInterval);
+
+  // Finalize last segment
+  const now = Date.now();
+  const dur = (now - segmentStart) / 1000;
+  if (currentActivity === 'walking') walkingTime += dur;
+  else if (currentActivity === 'running') runningTime += dur;
+
+  document.getElementById('activity-selector').style.display = 'flex';
+  document.getElementById('main-btn').className = 'start';
+  document.getElementById('main-btn').innerHTML = '<span>▶</span> התחל פעילות';
+
+  showSummary();
+}
+
+function onPosition(pos) {
+  const { latitude: lat, longitude: lng, speed } = pos.coords;
+  const spd = Math.max(speed || 0, 0);
+
+  // Update marker
+  window.userMarker.setLatLng([lat, lng]);
+  map.panTo([lat, lng]);
+
+  // Classify
+  const newActivity = spd < WALK_MIN ? 'idle' : spd < RUN_MIN ? 'walking' : 'running';
+
+  // Activity changed — finalize old segment
+  if (newActivity !== currentActivity) {
+    finalizeSegment();
+    currentActivity = newActivity;
+    segmentStart = Date.now();
+    startNewPolyline(lat, lng);
+  }
+
+  // Distance
+  if (lastPos) {
+    const d = haversine(lastPos[0], lastPos[1], lat, lng);
+    if (d > 2) {
+      totalDistance += d;
+      if (currentActivity === 'walking') walkingDistance += d;
+      else if (currentActivity === 'running') runningDistance += d;
+    }
+  }
+
+  // Extend current polyline
+  if (currentPolyline) {
+    currentCoords.push([lat, lng]);
+    currentPolyline.setLatLngs(currentCoords);
+  } else {
+    startNewPolyline(lat, lng);
+  }
+
+  lastPos = [lat, lng];
+  updateStatsBar(spd, newActivity);
+}
+
+function startNewPolyline(lat, lng) {
+  currentCoords = lastPos ? [lastPos, [lat, lng]] : [[lat, lng]];
+  currentPolyline = L.polyline(currentCoords, {
+    color: ACTIVITY_COLORS[currentActivity],
+    weight: 5, opacity: 0.9
+  }).addTo(map);
+  polylines.push(currentPolyline);
+}
+
+function finalizeSegment() {
+  const dur = (Date.now() - segmentStart) / 1000;
+  if (currentActivity === 'walking') walkingTime += dur;
+  else if (currentActivity === 'running') runningTime += dur;
+}
+
+// ─── UI updates ───────────────────────────────────────────
+function updateTimer() {
+  const elapsed = Math.floor((Date.now() - startTime) / 1000);
+  document.getElementById('stat-time').textContent = formatTime(elapsed);
+}
+
+function updateStatsBar(spd, activity) {
+  document.getElementById('stat-distance').textContent = (totalDistance / 1000).toFixed(2);
+  document.getElementById('stat-speed').textContent = (spd * 3.6).toFixed(1);
+  const actEl = document.getElementById('stat-activity');
+  actEl.innerHTML = `<span class="dot" style="background:${ACTIVITY_COLORS[activity]}"></span><span>${ACTIVITY_LABELS[activity]}</span>`;
+}
+
+// ─── Summary ──────────────────────────────────────────────
+function showSummary() {
+  const elapsed = Math.floor((Date.now() - startTime) / 1000);
+  const calories = calcCalories();
+  const pace = totalDistance > 0 ? elapsed / (totalDistance / 1000) : 0;
+
+  document.getElementById('summary-date').textContent = new Date().toLocaleDateString('he-IL', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  });
+
+  document.getElementById('sum-distance').textContent =
+    totalDistance >= 1000 ? (totalDistance/1000).toFixed(2) + ' ק"מ' : Math.round(totalDistance) + ' מ\'';
+  document.getElementById('sum-time').textContent = formatTime(elapsed);
+  document.getElementById('sum-calories').textContent = Math.round(calories) + ' קק"ל';
+  document.getElementById('sum-pace').textContent = pace > 0 ? formatPace(pace) : '--';
+
+  // Breakdown
+  if (runningDistance > 0) {
+    document.getElementById('run-row').style.display = 'flex';
+    document.getElementById('run-sub').textContent = formatTime(Math.round(runningTime));
+    document.getElementById('run-vals').textContent = (runningDistance/1000).toFixed(2) + ' ק"מ';
+  }
+  if (walkingDistance > 0) {
+    document.getElementById('walk-row').style.display = 'flex';
+    document.getElementById('walk-sub').textContent = formatTime(Math.round(walkingTime));
+    document.getElementById('walk-vals').textContent = (walkingDistance/1000).toFixed(2) + ' ק"מ';
+  }
+
+  const total = totalDistance || 1;
+  const rPct = runningDistance / total;
+  const wPct = walkingDistance / total;
+  document.getElementById('run-bar').style.width = (rPct * 100) + '%';
+  document.getElementById('walk-bar').style.width = (wPct * 100) + '%';
+  document.getElementById('run-pct').textContent = `ריצה ${Math.round(rPct*100)}%`;
+  document.getElementById('walk-pct').textContent = `הליכה ${Math.round(wPct*100)}%`;
+
+  document.getElementById('summary-modal').classList.add('visible');
+  document.getElementById('stats-bar').classList.remove('visible');
+  document.getElementById('legend').classList.remove('visible');
+}
+
+function dismissSummary() {
+  document.getElementById('summary-modal').classList.remove('visible');
+  document.getElementById('run-row').style.display = 'none';
+  document.getElementById('walk-row').style.display = 'none';
+}
+
+// ─── Helpers ──────────────────────────────────────────────
+function calcCalories(weight = 70) {
+  return (3.5 * weight * walkingTime / 3600) + (9.0 * weight * runningTime / 3600);
+}
+
+function formatTime(s) {
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (h > 0) return `${h}:${pad(m)}:${pad(sec)}`;
+  return `${pad(m)}:${pad(sec)}`;
+}
+
+function pad(n) { return String(n).padStart(2, '0'); }
+
+function formatPace(secPerKm) {
+  const m = Math.floor(secPerKm / 60);
+  const s = Math.round(secPerKm % 60);
+  return `${m}:${pad(s)} /ק"מ`;
+}
+
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+</script>
+</body>
+</html>
