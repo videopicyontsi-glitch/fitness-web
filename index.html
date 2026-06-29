@@ -419,6 +419,7 @@
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-image@0.4.0/leaflet-image.js"></script>
 <script>
 // ─── State ───────────────────────────────────────────────
 let map, watchId;
@@ -516,7 +517,20 @@ function stopTracking() {
   document.getElementById('stats-bar').classList.remove('visible');
   document.getElementById('legend').classList.remove('visible');
 
-  showSummary();
+  // Fit map to full route before screenshot
+  if (allRoutePoints.length > 1) {
+    const lats = allRoutePoints.map(p => p.lat);
+    const lngs = allRoutePoints.map(p => p.lng);
+    map.fitBounds([[Math.min(...lats), Math.min(...lngs)], [Math.max(...lats), Math.max(...lngs)]], { padding: [40, 40] });
+  }
+
+  // Wait for tiles to load then capture
+  setTimeout(() => {
+    leafletImage(map, (err, canvas) => {
+      window._mapSnapshot = err ? null : canvas.toDataURL('image/jpeg', 0.85);
+      showSummary();
+    });
+  }, 800);
 }
 
 function onPosition(pos) {
@@ -616,8 +630,25 @@ function showSummary() {
   document.getElementById('run-pct').textContent = `ריצה ${Math.round(rp*100)}%`;
   document.getElementById('walk-pct').textContent = `הליכה ${Math.round(wp*100)}%`;
 
+  // Show map snapshot
+  const canvas = document.getElementById('route-canvas');
+  const snap = window._mapSnapshot;
+  if (snap) {
+    canvas.style.display = 'none';
+    let img = document.getElementById('route-map-img');
+    if (!img) {
+      img = document.createElement('img');
+      img.id = 'route-map-img';
+      img.style.cssText = 'width:100%;border-radius:16px;display:block;margin-bottom:0';
+      canvas.parentElement.insertBefore(img, canvas);
+    }
+    img.src = snap;
+    if (lastSummaryData) lastSummaryData.routeImage = snap;
+  } else {
+    canvas.style.display = 'none';
+  }
+
   document.getElementById('summary-modal').classList.add('visible');
-  drawRouteCanvas();
 }
 
 function drawRouteCanvas() {
