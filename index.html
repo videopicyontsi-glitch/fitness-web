@@ -399,6 +399,9 @@
         </div>
       </div>
     </div>
+    <div style="margin-bottom:16px">
+      <canvas id="route-canvas" style="width:100%;border-radius:16px;display:block;background:#0f0f1a"></canvas>
+    </div>
     <div class="summary-btns">
       <button id="save-btn" onclick="saveActivity()">💾 שמור</button>
       <button id="dismiss-btn" onclick="dismissSummary()">סיום</button>
@@ -428,6 +431,7 @@ let currentActivity = 'idle';
 let lastPos = null, segmentStart = null;
 let currentPolyline = null, currentCoords = [], polylines = [];
 let lastSummaryData = null;
+let allRoutePoints = []; // {lat, lng, activity}
 
 const WALK_MIN = 0.5, RUN_MIN = 2.2;
 const COLORS = { idle: '#6b7280', walking: '#3b82f6', running: '#f97316' };
@@ -441,6 +445,8 @@ function initMap(lat, lng) {
   window.userMarker = L.circleMarker([lat, lng], {
     radius: 10, color: '#fff', weight: 2, fillColor: '#6366f1', fillOpacity: 1
   }).addTo(map);
+  // Fix Leaflet sizing bug — must call after DOM has painted
+  setTimeout(() => map.invalidateSize(), 100);
 }
 
 function requestLocation() {
@@ -468,6 +474,7 @@ function startTracking() {
   startTime = Date.now();
   polylines.forEach(p => map.removeLayer(p));
   polylines = []; currentPolyline = null; currentCoords = [];
+  allRoutePoints = [];
 
   document.getElementById('stats-bar').classList.add('visible');
   document.getElementById('legend').classList.add('visible');
@@ -535,6 +542,7 @@ function onPosition(pos) {
   }
   if (currentPolyline) { currentCoords.push([lat, lng]); currentPolyline.setLatLngs(currentCoords); }
   else startNewPolyline(lat, lng);
+  allRoutePoints.push({ lat, lng, activity: newAct });
   lastPos = [lat, lng];
 
   document.getElementById('stat-distance').textContent = (totalDistance/1000).toFixed(2);
@@ -609,6 +617,91 @@ function showSummary() {
   document.getElementById('walk-pct').textContent = `הליכה ${Math.round(wp*100)}%`;
 
   document.getElementById('summary-modal').classList.add('visible');
+  drawRouteCanvas();
+}
+
+function drawRouteCanvas() {
+  const canvas = document.getElementById('route-canvas');
+  const pts = allRoutePoints;
+  if (pts.length < 2) {
+    canvas.style.display = 'none';
+    return;
+  }
+  canvas.style.display = 'block';
+
+  const W = canvas.parentElement.clientWidth || 320;
+  const H = Math.round(W * 0.6);
+  canvas.width = W;
+  canvas.height = H;
+
+  const PAD = 24;
+  const lats = pts.map(p => p.lat), lngs = pts.map(p => p.lng);
+  const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+  const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+  const spanLat = maxLat - minLat || 0.0001;
+  const spanLng = maxLng - minLng || 0.0001;
+  const scale = Math.min((W - PAD*2) / spanLng, (H - PAD*2) / spanLat);
+
+  const toX = lng => PAD + (lng - minLng) * scale + ((W - PAD*2) - spanLng * scale) / 2;
+  const toY = lat => H - PAD - (lat - minLat) * scale - ((H - PAD*2) - spanLat * scale) / 2;
+
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#0f0f1a';
+  ctx.fillRect(0, 0, W, H);
+
+  // Draw subtle grid dots
+  ctx.fillStyle = 'rgba(255,255,255,0.04)';
+  for (let x = PAD; x < W - PAD; x += 20)
+    for (let y = PAD; y < H - PAD; y += 20)
+      ctx.fillRect(x, y, 1.5, 1.5);
+
+  // Draw route segments
+  const colorMap = { idle: '#6b7280', walking: '#3b82f6', running: '#f97316' };
+  ctx.lineWidth = 3.5;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+
+  for (let i = 1; i < pts.length; i++) {
+    ctx.beginPath();
+    ctx.strokeStyle = colorMap[pts[i].activity] || '#6b7280';
+    ctx.moveTo(toX(pts[i-1].lng), toY(pts[i-1].lat));
+    ctx.lineTo(toX(pts[i].lng), toY(pts[i].lat));
+    ctx.stroke();
+  }
+
+  // Start dot (green)
+  ctx.beginPath();
+  ctx.arc(toX(pts[0].lng), toY(pts[0].lat), 6, 0, Math.PI*2);
+  ctx.fillStyle = '#22c55e';
+  ctx.fill();
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // End dot (red)
+  const last = pts[pts.length - 1];
+  ctx.beginPath();
+  ctx.arc(toX(last.lng), toY(last.lat), 6, 0, Math.PI*2);
+  ctx.fillStyle = '#ef4444';
+  ctx.fill();
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Legend
+  ctx.font = '11px -apple-system, sans-serif';
+  const legend = [['#22c55e','התחלה'],['#ef4444','סיום'],['#f97316','ריצה'],['#3b82f6','הליכה']];
+  legend.forEach(([color, label], i) => {
+    const x = PAD + i * (W - PAD*2) / legend.length;
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(x + 6, H - 8, 4, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.textAlign = 'right';
+    ctx.fillText(label, x + 40, H - 4);
+  });
+
+  // Save canvas image to lastSummaryData
+  if (lastSummaryData) lastSummaryData.routeImage = canvas.toDataURL('image/png');
 }
 
 async function saveActivity() {
@@ -657,6 +750,7 @@ function renderHistory(activities) {
       <div class="h-name">${a.name || 'פעילות'}</div>
       <div class="h-date">${a.date}</div>
       <span class="h-type">${a.type || ''}</span>
+      ${a.routeImage ? `<img src="${a.routeImage}" style="width:100%;border-radius:12px;margin:10px 0;display:block">` : ''}
       <div class="h-stats">
         <div class="h-stat">
           <div class="hv">${a.distance >= 1000 ? (a.distance/1000).toFixed(2)+' ק"מ' : Math.round(a.distance)+' מ\''}</div>
