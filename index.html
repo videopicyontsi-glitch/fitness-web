@@ -174,8 +174,8 @@
     #summary-card .date { text-align: center; color: rgba(255,255,255,0.4); font-size: 13px; margin-bottom: 24px; }
 
     .summary-grid {
-      display: grid; grid-template-columns: repeat(2, 1fr);
-      gap: 12px; margin-bottom: 24px;
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 10px; margin-bottom: 24px;
     }
     .summary-card {
       background: rgba(255,255,255,0.05);
@@ -374,6 +374,16 @@
         <div class="value" id="sum-pace">-</div>
         <div class="label">קצב ממוצע</div>
       </div>
+      <div class="summary-card">
+        <div class="icon">🏃</div>
+        <div class="value" id="sum-run-time">-</div>
+        <div class="label">זמן ריצה</div>
+      </div>
+      <div class="summary-card">
+        <div class="icon">🚶</div>
+        <div class="value" id="sum-walk-time">-</div>
+        <div class="label">זמן הליכה</div>
+      </div>
     </div>
     <div class="breakdown-section">
       <h3>פירוט פעילות</h3>
@@ -517,20 +527,35 @@ function stopTracking() {
   document.getElementById('stats-bar').classList.remove('visible');
   document.getElementById('legend').classList.remove('visible');
 
-  // Fit map to full route before screenshot
+  // Fit map to full route, wait for tiles, then screenshot
   if (allRoutePoints.length > 1) {
     const lats = allRoutePoints.map(p => p.lat);
     const lngs = allRoutePoints.map(p => p.lng);
-    map.fitBounds([[Math.min(...lats), Math.min(...lngs)], [Math.max(...lats), Math.max(...lngs)]], { padding: [40, 40] });
-  }
+    const bounds = [[Math.min(...lats), Math.min(...lngs)], [Math.max(...lats), Math.max(...lngs)]];
 
-  // Wait for tiles to load then capture
-  setTimeout(() => {
-    leafletImage(map, (err, canvas) => {
-      window._mapSnapshot = err ? null : canvas.toDataURL('image/jpeg', 0.85);
-      showSummary();
+    map.once('moveend', () => {
+      // Wait for tiles to finish loading
+      const waitForTiles = (tries) => {
+        const loading = map.getContainer().querySelectorAll('.leaflet-tile-container img:not(.leaflet-tile-loaded)').length;
+        if (loading === 0 || tries <= 0) {
+          setTimeout(() => {
+            leafletImage(map, (err, canvas) => {
+              window._mapSnapshot = err ? null : canvas.toDataURL('image/jpeg', 0.85);
+              showSummary();
+            });
+          }, 300);
+        } else {
+          setTimeout(() => waitForTiles(tries - 1), 300);
+        }
+      };
+      waitForTiles(15); // max ~4.5 seconds
     });
-  }, 800);
+
+    map.fitBounds(bounds, { padding: [40, 40], animate: true });
+  } else {
+    window._mapSnapshot = null;
+    showSummary();
+  }
 }
 
 function onPosition(pos) {
@@ -612,6 +637,8 @@ function showSummary() {
   document.getElementById('sum-time').textContent = formatTime(elapsed);
   document.getElementById('sum-calories').textContent = Math.round(calories)+' קק"ל';
   document.getElementById('sum-pace').textContent = pace > 0 ? formatPace(pace) : '--';
+  document.getElementById('sum-run-time').textContent = runningTime > 0 ? formatTime(Math.round(runningTime)) : '--';
+  document.getElementById('sum-walk-time').textContent = walkingTime > 0 ? formatTime(Math.round(walkingTime)) : '--';
 
   if (runningDistance > 0) {
     document.getElementById('run-row').style.display = 'flex';
