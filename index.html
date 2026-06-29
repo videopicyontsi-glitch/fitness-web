@@ -224,67 +224,96 @@
     }
 
     /* History modal */
-    #history-modal {
+    #history-modal, #detail-modal {
       position: absolute; inset: 0; z-index: 3000;
       background: #0f0f1a;
       display: none; flex-direction: column;
     }
     #history-modal.visible { display: flex; }
-    #history-header {
+    #detail-modal.visible { display: flex; }
+
+    .modal-header {
       display: flex; align-items: center; justify-content: space-between;
       padding: 20px 20px 12px;
       border-bottom: 1px solid rgba(255,255,255,0.08);
+      flex-shrink: 0;
     }
-    #history-header h2 { font-size: 20px; }
-    #close-history {
-      background: rgba(255,255,255,0.08);
-      border: none; color: #fff;
+    .modal-header h2 { font-size: 20px; }
+    .close-btn {
+      background: rgba(255,255,255,0.08); border: none; color: #fff;
       width: 36px; height: 36px; border-radius: 50%;
       font-size: 18px; cursor: pointer;
       display: flex; align-items: center; justify-content: center;
     }
+
+    /* History list */
     #history-list {
-      flex: 1; overflow-y: auto;
-      padding: 16px;
-      display: flex; flex-direction: column; gap: 12px;
+      flex: 1; overflow-y: auto; padding: 16px;
+      display: flex; flex-direction: column; gap: 8px;
     }
-    .history-item {
+    .date-group-header {
+      font-size: 13px; font-weight: 700;
+      color: rgba(255,255,255,0.4);
+      padding: 8px 4px 4px;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .history-row {
       background: rgba(255,255,255,0.05);
-      border-radius: 16px; padding: 16px;
+      border-radius: 14px; padding: 14px 16px;
       border: 1px solid rgba(255,255,255,0.08);
-      position: relative;
+      display: flex; align-items: center; gap: 12px;
+      cursor: pointer; transition: background 0.15s;
     }
-    .history-item .h-name {
-      font-size: 16px; font-weight: 700; margin-bottom: 4px;
-    }
-    .history-item .h-date {
-      font-size: 12px; color: rgba(255,255,255,0.4); margin-bottom: 12px;
-    }
-    .history-item .h-stats {
-      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
-    }
-    .h-stat { text-align: center; }
-    .h-stat .hv { font-size: 15px; font-weight: 700; }
-    .h-stat .hl { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 2px; }
-    .h-type {
-      display: inline-block;
-      background: rgba(99,102,241,0.2);
-      color: #a5b4fc;
-      border-radius: 8px;
-      padding: 2px 8px;
-      font-size: 12px;
-      margin-bottom: 10px;
-    }
-    .h-delete {
-      position: absolute; top: 12px; left: 12px;
-      background: transparent; border: none;
-      color: rgba(255,255,255,0.3); font-size: 18px;
-      cursor: pointer; padding: 4px;
-    }
-    .h-delete:active { color: #ef4444; }
+    .history-row:active { background: rgba(255,255,255,0.1); }
+    .h-icon { font-size: 28px; flex-shrink: 0; }
+    .h-info { flex: 1; min-width: 0; }
+    .h-name { font-size: 15px; font-weight: 700; }
+    .h-sub { font-size: 12px; color: rgba(255,255,255,0.45); margin-top: 2px; }
+    .h-right { text-align: left; flex-shrink: 0; }
+    .h-dist { font-size: 15px; font-weight: 700; color: #a5b4fc; }
+    .h-time { font-size: 12px; color: rgba(255,255,255,0.4); margin-top: 2px; }
+    .h-chevron { color: rgba(255,255,255,0.2); font-size: 14px; margin-right: -4px; }
     #history-empty {
       text-align: center; color: rgba(255,255,255,0.3);
       margin-top: 60px; font-size: 15px; line-height: 2;
+    }
+
+    /* Detail view */
+    #detail-scroll { flex: 1; overflow-y: auto; padding: 16px; }
+    .detail-map-img {
+      width: 100%; border-radius: 16px; display: block; margin-bottom: 16px;
+    }
+    .detail-title { font-size: 20px; font-weight: 800; margin-bottom: 2px; }
+    .detail-date { font-size: 13px; color: rgba(255,255,255,0.4); margin-bottom: 16px; }
+    .detail-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 10px; margin-bottom: 16px;
+    }
+    .detail-card {
+      background: rgba(255,255,255,0.06); border-radius: 14px;
+      padding: 14px 8px; text-align: center;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .detail-card .dc-icon { font-size: 22px; margin-bottom: 6px; }
+    .detail-card .dc-val { font-size: 16px; font-weight: 700; }
+    .detail-card .dc-lbl { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 3px; }
+    .detail-section {
+      background: rgba(255,255,255,0.05); border-radius: 14px;
+      padding: 14px; margin-bottom: 12px;
+    }
+    .detail-section h4 { font-size: 13px; color: rgba(255,255,255,0.5); margin-bottom: 12px; }
+    .detail-bar { height: 10px; border-radius: 5px; display: flex; overflow: hidden; gap: 2px; margin-top: 8px; }
+    .db-run  { background: #f97316; border-radius: 5px; }
+    .db-walk { background: #3b82f6; border-radius: 5px; }
+    .db-idle { background: rgba(255,255,255,0.1); border-radius: 5px; flex: 1; }
+    .detail-legend { display: flex; gap: 12px; margin-top: 8px; flex-wrap: wrap; }
+    .dl-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: rgba(255,255,255,0.6); }
+    .dl-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .delete-btn {
+      width: 100%; padding: 14px; background: rgba(239,68,68,0.15);
+      color: #ef4444; border: 1px solid rgba(239,68,68,0.3);
+      border-radius: 14px; font-size: 15px; font-weight: 600;
+      font-family: inherit; cursor: pointer; margin-top: 4px;
     }
   </style>
 </head>
@@ -421,11 +450,21 @@
 
 <!-- History modal -->
 <div id="history-modal">
-  <div id="history-header">
+  <div class="modal-header">
     <h2>📋 היסטוריה</h2>
-    <button id="close-history" onclick="closeHistory()">✕</button>
+    <button class="close-btn" onclick="closeHistory()">✕</button>
   </div>
   <div id="history-list"></div>
+</div>
+
+<!-- Detail modal -->
+<div id="detail-modal">
+  <div class="modal-header">
+    <button class="close-btn" onclick="closeDetail()" style="font-size:16px">← חזרה</button>
+    <h2 id="detail-header-title">פרטי פעילות</h2>
+    <div style="width:36px"></div>
+  </div>
+  <div id="detail-scroll"></div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -451,7 +490,7 @@ const LABELS = { idle: 'עצירה', walking: 'הליכה', running: 'ריצה' 
 // ─── Map ─────────────────────────────────────────────────
 function initMap(lat, lng) {
   map = L.map('map', { zoomControl: false, attributionControl: false }).setView([lat, lng], 17);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19, crossOrigin: true }).addTo(map);
   L.control.zoom({ position: 'bottomleft' }).addTo(map);
   window.userMarker = L.circleMarker([lat, lng], {
     radius: 10, color: '#fff', weight: 2, fillColor: '#6366f1', fillOpacity: 1
@@ -785,15 +824,19 @@ function dismissSummary() {
 }
 
 // ─── History ──────────────────────────────────────────────
+let _activities = [];
+
 async function openHistory() {
   document.getElementById('history-modal').classList.add('visible');
   const list = document.getElementById('history-list');
   list.innerHTML = '<div style="text-align:center;padding:40px;color:rgba(255,255,255,0.3)">טוען...</div>';
   try {
     const res = await fetch('/activities');
-    const activities = await res.json();
-    renderHistory(activities);
-  } catch { list.innerHTML = '<div style="text-align:center;padding:40px;color:rgba(255,255,255,0.3)">שגיאה בטעינה</div>'; }
+    _activities = await res.json();
+    renderHistory(_activities);
+  } catch {
+    list.innerHTML = '<div style="text-align:center;padding:40px;color:rgba(255,255,255,0.3)">שגיאה בטעינה</div>';
+  }
 }
 
 function renderHistory(activities) {
@@ -802,39 +845,114 @@ function renderHistory(activities) {
     list.innerHTML = '<div id="history-empty">עדיין אין פעילויות שמורות 🏃<br>התחל פעילות ולחץ שמור</div>';
     return;
   }
-  list.innerHTML = activities.map(a => `
-    <div class="history-item" id="hi-${a.id}">
-      <button class="h-delete" onclick="deleteActivity(${a.id})">🗑</button>
-      <div class="h-name">${a.name || 'פעילות'}</div>
-      <div class="h-date">${a.date}</div>
-      <span class="h-type">${a.type || ''}</span>
-      ${a.routeImage ? `<img src="${a.routeImage}" style="width:100%;border-radius:12px;margin:10px 0;display:block">` : ''}
-      <div class="h-stats">
-        <div class="h-stat">
-          <div class="hv">${a.distance >= 1000 ? (a.distance/1000).toFixed(2)+' ק"מ' : Math.round(a.distance)+' מ\''}</div>
-          <div class="hl">מרחק</div>
+
+  // Group by calendar date
+  const groups = {};
+  activities.forEach(a => {
+    const d = new Date(a.timestamp);
+    const key = d.toLocaleDateString('he-IL', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(a);
+  });
+
+  const icon = t => t && t.includes('ריצה') ? '🏃' : t && t.includes('הליכה') ? '🚶' : '⚡';
+
+  list.innerHTML = Object.entries(groups).map(([date, acts]) => `
+    <div class="date-group-header">${date}</div>
+    ${acts.map(a => `
+      <div class="history-row" onclick="openDetail(${a.id})">
+        <div class="h-icon">${icon(a.type)}</div>
+        <div class="h-info">
+          <div class="h-name">${a.name || a.type || 'פעילות'}</div>
+          <div class="h-sub">${formatTime(a.elapsed)} · ${Math.round(a.calories)} קק"ל</div>
         </div>
-        <div class="h-stat">
-          <div class="hv">${formatTime(a.elapsed)}</div>
-          <div class="hl">זמן</div>
+        <div class="h-right">
+          <div class="h-dist">${a.distance >= 1000 ? (a.distance/1000).toFixed(2)+' ק"מ' : Math.round(a.distance)+' מ\''}</div>
+          <div class="h-time">${a.pace > 0 ? formatPace(a.pace) : ''}</div>
         </div>
-        <div class="h-stat">
-          <div class="hv">${a.calories} קק"ל</div>
-          <div class="hl">קלוריות</div>
-        </div>
+        <div class="h-chevron">›</div>
+      </div>
+    `).join('')}
+  `).join('');
+}
+
+function openDetail(id) {
+  const a = _activities.find(x => x.id === id);
+  if (!a) return;
+
+  document.getElementById('detail-header-title').textContent = a.name || a.type || 'פעילות';
+
+  const tot = a.distance || 1;
+  const rp = (a.runningDistance || 0) / tot;
+  const wp = (a.walkingDistance || 0) / tot;
+
+  document.getElementById('detail-scroll').innerHTML = `
+    ${a.routeImage ? `<img class="detail-map-img" src="${a.routeImage}">` : ''}
+    <div class="detail-title">${a.name || a.type || 'פעילות'}</div>
+    <div class="detail-date">${a.date}</div>
+
+    <div class="detail-grid">
+      <div class="detail-card">
+        <div class="dc-icon">📍</div>
+        <div class="dc-val">${a.distance >= 1000 ? (a.distance/1000).toFixed(2) : Math.round(a.distance)}</div>
+        <div class="dc-lbl">${a.distance >= 1000 ? 'ק"מ' : 'מטר'}</div>
+      </div>
+      <div class="detail-card">
+        <div class="dc-icon">⏱️</div>
+        <div class="dc-val">${formatTime(a.elapsed)}</div>
+        <div class="dc-lbl">זמן כולל</div>
+      </div>
+      <div class="detail-card">
+        <div class="dc-icon">🔥</div>
+        <div class="dc-val">${a.calories}</div>
+        <div class="dc-lbl">קלוריות</div>
+      </div>
+      <div class="detail-card">
+        <div class="dc-icon">📈</div>
+        <div class="dc-val">${a.pace > 0 ? formatPace(a.pace) : '--'}</div>
+        <div class="dc-lbl">קצב ממוצע</div>
+      </div>
+      <div class="detail-card">
+        <div class="dc-icon">🏃</div>
+        <div class="dc-val">${a.runningTime > 0 ? formatTime(Math.round(a.runningTime)) : '--'}</div>
+        <div class="dc-lbl">זמן ריצה</div>
+      </div>
+      <div class="detail-card">
+        <div class="dc-icon">🚶</div>
+        <div class="dc-val">${a.walkingTime > 0 ? formatTime(Math.round(a.walkingTime)) : '--'}</div>
+        <div class="dc-lbl">זמן הליכה</div>
       </div>
     </div>
-  `).join('');
+
+    <div class="detail-section">
+      <h4>יחס הליכה / ריצה</h4>
+      <div class="detail-legend">
+        <div class="dl-item"><div class="dl-dot" style="background:#f97316"></div>ריצה ${Math.round(rp*100)}% · ${(a.runningDistance/1000||0).toFixed(2)} ק"מ</div>
+        <div class="dl-item"><div class="dl-dot" style="background:#3b82f6"></div>הליכה ${Math.round(wp*100)}% · ${(a.walkingDistance/1000||0).toFixed(2)} ק"מ</div>
+      </div>
+      <div class="detail-bar">
+        <div class="db-run"  style="width:${rp*100}%"></div>
+        <div class="db-walk" style="width:${wp*100}%"></div>
+        <div class="db-idle"></div>
+      </div>
+    </div>
+
+    <button class="delete-btn" onclick="deleteActivity(${a.id})">🗑 מחק פעילות</button>
+  `;
+
+  document.getElementById('detail-modal').classList.add('visible');
+}
+
+function closeDetail() {
+  document.getElementById('detail-modal').classList.remove('visible');
 }
 
 async function deleteActivity(id) {
   if (!confirm('למחוק פעילות זו?')) return;
   await fetch(`/activities/${id}`, { method: 'DELETE' });
-  document.getElementById(`hi-${id}`)?.remove();
-  if (!document.querySelector('.history-item')) {
-    document.getElementById('history-list').innerHTML =
-      '<div id="history-empty">עדיין אין פעילויות שמורות 🏃<br>התחל פעילות ולחץ שמור</div>';
-  }
+  _activities = _activities.filter(a => a.id !== id);
+  closeDetail();
+  renderHistory(_activities);
 }
 
 function closeHistory() {
