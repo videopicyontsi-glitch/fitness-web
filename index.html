@@ -420,6 +420,7 @@
 // ─── State ───────────────────────────────────────────────
 let map, watchId;
 let isTracking = false;
+let wakeLock = null;
 let startTime = null, timerInterval = null;
 let totalDistance = 0, walkingDistance = 0, runningDistance = 0;
 let walkingTime = 0, runningTime = 0;
@@ -480,6 +481,13 @@ function startTracking() {
   watchId = navigator.geolocation.watchPosition(onPosition, null, {
     enableHighAccuracy: true, maximumAge: 0, timeout: 10000
   });
+
+  // Keep screen on while tracking
+  if ('wakeLock' in navigator) {
+    navigator.wakeLock.request('screen')
+      .then(lock => { wakeLock = lock; })
+      .catch(() => {});
+  }
 }
 
 function stopTracking() {
@@ -489,6 +497,9 @@ function stopTracking() {
   const dur = (Date.now() - segmentStart) / 1000;
   if (currentActivity === 'walking') walkingTime += dur;
   else if (currentActivity === 'running') runningTime += dur;
+
+  // Release wake lock
+  if (wakeLock) { wakeLock.release(); wakeLock = null; }
 
   document.getElementById('history-btn').classList.remove('hidden');
   document.getElementById('name-row').style.display = 'flex';
